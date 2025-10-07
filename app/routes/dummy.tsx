@@ -1,10 +1,10 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../pages/welcome/welcome";
+import { Dummy } from "../pages/dummy/dummy";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Dummy Page" },
+    { name: "description", content: "This is a dummy page for testing purposes." },
   ];
 }
 
@@ -13,5 +13,5 @@ export function loader({ context }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  return <Welcome message={loaderData.message} />;
+  return <Dummy message={loaderData.message} />;
 }
