@@ -1,10 +1,10 @@
 import type { Route } from "./+types/home";
-import {MiiPlaza} from "../pages/mii_plaza/index";
+import {MiiBuilder} from "../pages/mii/mii_builder/mii_builder";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Mii Plaza" },
-    { name: "description", content: "This is a Mii Plaza page." },
+    { title: "Mii Builder" },
+    { name: "description", content: "This is a Mii Builder page." },
   ];
 }
 
@@ -13,5 +13,5 @@ export function loader({ context }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  return <MiiPlaza />;
+  return <MiiBuilder />;
 }

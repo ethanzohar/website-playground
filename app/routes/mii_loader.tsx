@@ -1,5 +1,5 @@
 import type { Route } from "./+types/home";
-import {MiiPlaza} from "../pages/mii_plaza/index";
+import {MiiLoader} from "../pages/mii_plaza/index";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -13,5 +13,5 @@ export function loader({ context }: Route.LoaderArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  return <MiiPlaza />;
+  return <MiiLoader />;
 }

@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { useEffect, useRef, useState } from "react";
 
 function degToRad(degrees: number) {
@@ -100,6 +102,118 @@ function createFloor(scene: THREE.Scene) {
 }
 
 /**
+ * Loads and positions GLB models in the scene
+ */
+function loadModels(scene: THREE.Scene) {
+  const loader = new GLTFLoader();
+  const loadedModels: THREE.Object3D[] = [];
+
+  // Set up DRACOLoader for compressed GLB files
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+  loader.setDRACOLoader(dracoLoader);
+  
+
+  // Load Armature model with timeout
+  const loadingTimeout = setTimeout(() => {
+    // Add a fallback cube if loading takes too long
+    const fallbackGeometry = new THREE.BoxGeometry(2, 2, 2);
+    const fallbackMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+    fallbackMesh.position.set(0, 1, 0);
+    scene.add(fallbackMesh);
+    loadedModels.push(fallbackMesh);
+  }, 10000); // 10 second timeout
+
+  loader.load(
+    '/models/Armature.glb',
+    (gltf) => {
+      clearTimeout(loadingTimeout);
+      const model = gltf.scene;
+      
+      // Count bones and meshes
+      let boneCount = 0;
+      let meshCount = 0;
+      model.traverse((child) => {
+        if (child.isMesh) {
+          meshCount++;
+        }
+        if (child.isBone) {
+          boneCount++;
+        }
+      });
+      
+      // Position the model
+      model.position.x = 0;
+      model.position.y = 1;
+      model.position.z = 0;
+      
+      // Add the model to scene
+      scene.add(model);
+      loadedModels.push(model);
+      
+      // If we have bones but no meshes, visualize the bones
+      if (boneCount > 0 && meshCount === 0) {
+        model.traverse((child) => {
+          if (child.isBone) {
+            // Create a small sphere at each bone position
+            const boneGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+            const boneMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const boneVisual = new THREE.Mesh(boneGeometry, boneMaterial);
+            
+            // Get world position of the bone
+            const worldPosition = new THREE.Vector3();
+            child.getWorldPosition(worldPosition);
+            boneVisual.position.copy(worldPosition);
+            
+            scene.add(boneVisual);
+            loadedModels.push(boneVisual);
+            
+            // Create lines from parent to child bones
+            if (child.parent && child.parent.isBone) {
+              const parentWorldPosition = new THREE.Vector3();
+              child.parent.getWorldPosition(parentWorldPosition);
+              
+              const lineGeometry = new THREE.BufferGeometry().setFromPoints([
+                parentWorldPosition,
+                worldPosition
+              ]);
+              const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00 });
+              const line = new THREE.Line(lineGeometry, lineMaterial);
+              
+              scene.add(line);
+              loadedModels.push(line);
+            }
+          }
+        });
+      }
+    },
+    (progress) => {
+      // Progress callback - no logging needed
+    },
+    (error) => {
+      clearTimeout(loadingTimeout);
+      
+      // Add a fallback cube if the model fails to load
+      const fallbackGeometry = new THREE.BoxGeometry(2, 2, 2);
+      const fallbackMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      const fallbackMesh = new THREE.Mesh(fallbackGeometry, fallbackMaterial);
+      fallbackMesh.position.set(0, 1, 0);
+      scene.add(fallbackMesh);
+      loadedModels.push(fallbackMesh);
+    }
+  );
+
+  // Return cleanup function
+  return () => {
+    loadedModels.forEach(model => {
+      scene.remove(model);
+    });
+    dracoLoader.dispose();
+  };
+}
+
+/**
  * MiiPlaza component - A Three.js scene with a rotating green cube
  * 
  * This component demonstrates proper Three.js integration with React Router SSR:
@@ -126,8 +240,24 @@ export function MiiPlaza() {
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
 
+    // Add some lighting to help see the models
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 10, 5);
+    scene.add(directionalLight);
+
+    // Add a simple reference cube to help with positioning
+    // const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+    // const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    // const referenceCube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    // referenceCube.position.set(0, 2, 0);
+    // scene.add(referenceCube);
+
     // Create dynamic objects and get cleanup function
     const cleanupFloor = createFloor(scene);
+    const cleanupModels = loadModels(scene);
 
     // Position camera for top-down perspective with slight upward rotation
     camera.position.x = 0;
@@ -221,6 +351,7 @@ export function MiiPlaza() {
       
       // Clean up dynamic objects
       cleanupFloor();
+      cleanupModels();
       
       // Dispose of renderer
       renderer.dispose();
