@@ -324,6 +324,7 @@ export function Mii({ scene, miiUrl, overrides, position = [0, 0, 0], scale = 1}
     if (!(headBone instanceof THREE.Bone)) {
       throw new Error('Head bone not found.');
     }
+
     // Locate the skeleton in the SkinnedMesh, needed to call attach().
     const skinnedMesh = findSkinnedMeshWithBone(body.model, headBoneName);
     if (!skinnedMesh) {
@@ -496,6 +497,18 @@ export function Mii({ scene, miiUrl, overrides, position = [0, 0, 0], scale = 1}
       // the mixer or animation changes, the time persists.
       animClockDelta += clock.getDelta();
       mixer.setTime(animClockDelta);
+
+      // 🔹 Apply persistent head tilt after the mixer updates skeleton pose
+      const body = currentBody?.model;
+      const headBoneName = currentBody?.scaleDesc?.head;
+
+      if (body && headBoneName) {
+        const headBone = body.getObjectByName(headBoneName);
+        if (headBone && headBone instanceof THREE.Bone) {
+          headBone.rotation.x = THREE.MathUtils.degToRad(-45);
+          headBone.updateMatrixWorld(true);
+        }
+      }
     }
   }
 
