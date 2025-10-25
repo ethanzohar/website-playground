@@ -447,6 +447,8 @@ export function Mii({ scene, miiUrl, overrides, position = [0, 0, 0], scale = 1}
   
     // Assign one animation from the glTF model.
     const animations = gltf.animations;
+    console.log({animations})
+
     // Always replace the existing mixer.
     mixer = new THREE.AnimationMixer(model);
 
