@@ -6,8 +6,8 @@ import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import helvetiker from "three/examples/fonts/helvetiker_regular.typeface.json";
 
 const NUM_POINTS = 70;
-const MIN_DIST = 30;
-const MAX_DIST = 70;
+const MIN_DIST = 15;
+const MAX_DIST = 40;
 const FILL_ASCII_ARRAY = ["*", "&", "#", "+"]
 const ASCII_ARRAY = ["-", ...FILL_ASCII_ARRAY];
 const FONT_LOADER = new FontLoader();
@@ -71,6 +71,10 @@ function createAsciiLineMeshes(
 
 export function ImageExplode() {
   const mountRef = useRef<HTMLDivElement>(null);
+  let userIsInteracting = false;
+  let currentAngle = 0;
+  const radius = 30;
+  const speed = 0.001;
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -80,6 +84,7 @@ export function ImageExplode() {
     scene.background = new THREE.Color(0xffffff);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    
     camera.position.set(20, 20, 20);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -94,6 +99,17 @@ export function ImageExplode() {
 
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+
+    controls.addEventListener("start", () => {
+      userIsInteracting = true;
+    });
+    controls.addEventListener("end", () => {
+      userIsInteracting = false;
+
+      currentAngle = Math.atan2(camera.position.z, camera.position.x);
+    });
 
     // Precompute all ASCII geometries
     const font = FONT_LOADER.parse(helvetiker);
@@ -142,6 +158,16 @@ export function ImageExplode() {
     let frame = 0;
     const animate = () => {
       requestAnimationFrame(animate);
+
+
+        // Only auto-rotate if the user is not dragging
+  if (!userIsInteracting) {
+    currentAngle -= speed; // continue from wherever user left off
+    camera.position.x = Math.cos(currentAngle) * radius;
+    camera.position.z = Math.sin(currentAngle) * radius;
+    camera.lookAt(0, 0, 0);
+  }
+
       controls.update();
 
       if (frame % 5 === 0) {
